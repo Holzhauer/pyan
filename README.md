@@ -2,6 +2,21 @@
 
 Offline call graph generator for Python 3
 
+This fork adds functionality to
+
+- exclude files from being scanned
+- annotate nodes with profiling data (total time / number of calls) 
+ 
+for the sphiny directive:
+ 
+ 	.. callgraph:: building_stock_model.costs.co2_cost._public
+		:zoomable:
+		:profile: {pyan_profile_filename}
+		:exclude-files: {pyan_exclude_files}
+
+Furthermore, it marks cached functions (with decorator **cached** or **lfu_cache**) in blue text color.
+
+
 [![Build Status](https://travis-ci.com/edumco/pyan.svg?branch=master)](https://travis-ci.com/edumco/pyan)
 [![FOSSA Status](https://app.fossa.io/api/projects/git%2Bgithub.com%2Fedumco%2Fpyan.svg?type=shield)](https://app.fossa.io/projects/git%2Bgithub.com%2Fedumco%2Fpyan?ref=badge_shield)
 [![Codacy Badge](https://api.codacy.com/project/badge/Grade/7cba5ba5d3694a42a1252243e3634b5e)](https://www.codacy.com/manual/edumco/pyan?utm_source=github.com&utm_medium=referral&utm_content=edumco/pyan&utm_campaign=Badge_Grade)
@@ -16,40 +31,6 @@ This project has 2 official repositories:
 
 > The PyPI package [pyan3](https://pypi.org/project/pyan3/) is built from development
 
-
-# Help wanted! [November 2023]
-
-The last major analyzer upgrades to `pyan` were made several years ago, for Python 3.6. If `pyan` has worked at all for Python 3.7+, that is pure luck.
-
-It pains me to say, but as I am sure you all have noticed by the inactivity, I do not have the resources to keep `pyan` alive, nor to fix its many design issues.
-
-**Therefore**:
-
-Since there is a continuing community interest in `pyan`, I would like to hand over the `pyan` project to the community, including write access to the PyPI package.
-
-If interested, you can contact me by posting a comment on [this issue](https://github.com/Technologicat/pyan/issues/94).
-
-**Background**
-
-I'm in a position that is rather peculiar for a software developer, where I have not needed a static analyzer in many years. Although as a computational scientist, I write my own research codes in Python, in practice:
-
- - 90% of the time, I am writing new code to solve some new problem, or writing sufficiently different code that existing implementations are not applicable. For some concrete examples:
-   - The FEnICS-based PDE solvers in [extrafeathers](https://github.com/Technologicat/extrafeathers); the [discontinuous Galerkin time integrator](https://github.com/Technologicat/pydgq) for ODE systems.
-   - The GPU implementation of the least-squares meshfree differentiator in [randomthought](https://github.com/Technologicat/randomthought) vs. the much older CPU implementation of the same algorithm, in [python-wlsqm](https://github.com/Technologicat/python-wlsqm). Different use case, different hardware, different assumptions, needed 100% new code.
- - The other 10% of the time, I am looking at either my own old code, or at something modular enough (e.g. how some particular feature of TensorFlow works internally), so that a local manual analysis is sufficient.
- - As a subfield of software engineering, numerics is an odd one out. Typical features are:
-   - Control flow is almost fully linear. Most solvers are scripts with hardcoded parameters (which are, at most, imported from a `config.py` -- which is as good as a configuration plaintext file as any).
-   - The dependency tree is very simple, and the degree of modularization is very high.
-   - The functional programming paradigm (or [REST](https://en.wikipedia.org/wiki/REST) paradigm) is readily applicable: data in, data out, no internal state.
-   - *Algorithms* are the highly nontrivial part.
-
-Therefore, in my work, a structural analyzer such as `pyan` does not help much. As we all know, this is not the case in most other kinds of software engineering.
-
-Of my Python metaprogramming projects, I am semi-actively using some parts of [unpythonic](https://github.com/Technologicat/unpythonic). I also have some interest in keeping the [mcpyrate](https://github.com/Technologicat/mcpyrate/) macro expander alive, because it goes much further than earlier designs, and no one else seems to have run off with the mantle yet. But that is basically all I can afford in the foreseeable future.
-
-Even for those two projects, as of this writing, the most recent opportunity I had to work on them was almost two years ago. So even the projects I **am** maintaining, currently only support up to Python 3.10.
-
- --Technologicat
 
 
 ## About
