@@ -30,7 +30,7 @@ from typing import Any
 from docutils.parsers.rst import directives
 from sphinx.ext.graphviz import align_spec, figure_wrapper, graphviz
 from sphinx.util.docutils import SphinxDirective
-
+from docutils import nodes
 from pyan import create_callgraph
 
 
@@ -60,6 +60,8 @@ class CallgraphDirective(SphinxDirective):
         "direction": direction_spec,
         "toctree": directives.unchanged,
         "zoomable": directives.unchanged,
+        "exclude-files": directives.unchanged,
+        "profile": directives.unchanged,
     }
 
     def run(self):
@@ -72,8 +74,16 @@ class CallgraphDirective(SphinxDirective):
         direction = "vertical"
         if "direction" in self.options:
             direction = self.options["direction"]
+        exclude_filenames = []
+        if "exclude-files" in self.options:
+            exclude_filenames = self.options["exclude-files"].split(",")
+        profile = None
+        if "profile" in self.options:
+            profile = self.options["profile"]
         dotcode = create_callgraph(
             filenames=f"{base_path}/**/*.py",
+            exclude_filenames = exclude_filenames,
+            profile = profile,
             root=base_path,
             function=func_name,
             namespace=base_name,

@@ -4,6 +4,7 @@
 from glob import glob
 import io
 from typing import List, Union
+import os
 
 from .analyzer import CallGraphVisitor
 from .main import main  # noqa: F401, for export only.
@@ -16,6 +17,8 @@ __version__ = "1.2.1"
 # TODO: fix code duplication with main.py, should have just one implementation.
 def create_callgraph(
     filenames: Union[List[str], str] = "**/*.py",
+    exclude_filenames = [],
+    profile = None,
     root: str = None,
     function: Union[str, None] = None,
     namespace: Union[str, None] = None,
@@ -59,7 +62,11 @@ def create_callgraph(
     """
     if isinstance(filenames, str):
         filenames = [filenames]
-    filenames = [fn2 for fn in filenames for fn2 in glob(fn, recursive=True)]
+    
+    def matches_filename(filename):
+        return ".".join(os.path.normpath(filename).split(os.sep)[-2:]) in exclude_filenames
+        
+    filenames = [fn2 for fn in filenames for fn2 in glob(fn, recursive=True) if not matches_filename(fn2)]
 
     if nested_groups:
         grouped = True
@@ -82,7 +89,7 @@ def create_callgraph(
         else:
             node = None
         v.filter(node=node, namespace=namespace, max_iter=max_iter)
-    graph = VisualGraph.from_visitor(v, options=graph_options)
+    graph = VisualGraph.from_visitor(v, options=graph_options, profile = profile)
 
     stream = io.StringIO()
     if format == "dot":

@@ -162,3 +162,11 @@ htmlcov
 .idea/
 .history/
 .vscode/
+
+# our vis. of architecture
+architecture.dot
+architecture.html
+architecture.svg
+/.project
+/.pydevproject
+/.settings

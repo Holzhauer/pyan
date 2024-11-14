@@ -5,6 +5,8 @@
 import colorsys
 import logging
 import re
+import pstats
+import ast
 
 
 class Colorizer:
@@ -54,8 +56,23 @@ class Colorizer:
             A = 0.7  # make nodes translucent (to handle possible overlaps)
             fill_RGBA = self.htmlize_rgb(*colorsys.hls_to_rgb(H, L, S), A=A)
 
-            # black text on light nodes, white text on (very) dark nodes.
-            text_RGB = "#000000" if L >= 0.5 else "#ffffff"
+            color_set = False
+            if isinstance(node.ast_node, ast.FunctionDef):
+                for n in node.ast_node.decorator_list:
+                    name = ''
+                    if isinstance(n, ast.Call):
+                        name = n.func.attr if isinstance(n.func, ast.Attribute) else n.func.id
+                    else:
+                        name = n.attr if isinstance(n, ast.Attribute) else n.id
+                    
+                    if name in ["cached", "lfu_cache"]:
+                        text_RGB = "#0000ff"
+                        color_set = True
+                        break                
+                    
+            if not color_set:
+                # black text on light nodes, white text on (very) dark nodes.
+                text_RGB = "#000000" if L >= 0.5 else "#ffffff"
         else:
             idx, _ = self.get(node)
             fill_RGBA = self.htmlize_rgb(1.0, 1.0, 1.0, 0.7)
@@ -120,7 +137,7 @@ class VisualGraph(object):
         self.grouped = grouped
 
     @classmethod
-    def from_visitor(cls, visitor, options=None, logger=None):
+    def from_visitor(cls, visitor, options=None, logger=None, profile = None):
         colored = options.get("colored", False)
         nested = options.get("nested_groups", False)
         grouped_alt = options.get("grouped_alt", False)
@@ -139,18 +156,36 @@ class VisualGraph(object):
         if annotated:
             if grouped:
                 # group label includes namespace already
-                def labeler(n):
-                    return n.get_annotated_name()
+                def labeler(n, stats=None):
+                    funcname = n.get_annotated_name().split(".")[-1]
+                    if stats is not None and funcname in stats.get_stats_profile().func_profiles.keys():
+                        return  n.get_annotated_name() + "\n ("+ \
+                                str(stats.get_stats_profile().func_profiles[funcname].tottime) + \
+                                "s/" + str(stats.get_stats_profile().func_profiles[funcname].ncalls) + ")"
+                    else:
+                        return n.get_annotated_name()
 
             else:
                 # the node label is the only place to put the namespace info
-                def labeler(n):
-                    return n.get_long_annotated_name()
-
+                def labeler(n, stats=None):
+                    funcname = n.get_long_annotated_name().split(".")[-1]
+                    if stats is not None and funcname in stats.get_stats_profile().func_profiles.keys():
+                        return  n.get_long_annotated_name() + "\n ("+ \
+                                str(stats.get_stats_profile().func_profiles[funcname].tottime) + \
+                                "s/" + str(stats.get_stats_profile().func_profiles[funcname].ncalls) + ")"
+                    else:
+                        return n.get_long_annotated_name()
+            
         else:
 
-            def labeler(n):
-                return n.get_short_name()
+            def labeler(n, stats=None):
+                funcname = n.get_short_name().split(".")[-1]
+                if stats is not None and funcname in stats.get_stats_profile().func_profiles.keys():
+                    return  n.get_short_name() + "\n ("+ \
+                            str(stats.get_stats_profile().func_profiles[funcname].tottime) + \
+                            "s/" + str(stats.get_stats_profile().func_profiles[funcname].ncalls) + ")"
+                else:
+                    return n.get_short_name() 
 
         logger = logger or logging.getLogger(__name__)
 
@@ -175,6 +210,9 @@ class VisualGraph(object):
         subgraph = root_graph
         namespace_stack = []
         prev_namespace = ""  # The namespace '' is first in visited_nodes.
+        stats = None
+        if profile is not None:
+            stats = pstats.Stats(profile)
         for node in visited_nodes:
             logger.info("Looking at %s" % node.name)
 
@@ -182,7 +220,7 @@ class VisualGraph(object):
             idx, fill_RGBA, text_RGB = colorizer.make_colors(node)
             visual_node = VisualNode(
                 id=node.get_label(),
-                label=labeler(node),
+                label=labeler(node, stats),
                 flavor=repr(node.flavor),
                 fill_color=fill_RGBA,
                 text_color=text_RGB,
