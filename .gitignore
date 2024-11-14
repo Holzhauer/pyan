@@ -167,3 +167,6 @@ htmlcov
 architecture.dot
 architecture.html
 architecture.svg
+/.project
+/.pydevproject
+/.settings

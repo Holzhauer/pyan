@@ -5,6 +5,7 @@
 import ast
 import logging
 import symtable
+import sys
 from typing import Union
 
 from .anutils import (
@@ -847,42 +848,50 @@ class CallGraphVisitor(ast.NodeVisitor):
         self.analyze_comprehension(node, "genexpr")
 
     def analyze_comprehension(self, node, label, field1="elt", field2=None):
-        # The outermost iterator is evaluated in the current scope;
-        # everything else in the new inner scope.
-        #
-        # See function symtable_handle_comprehension() in
-        #   https://github.com/python/cpython/blob/master/Python/symtable.c
-        # For how it works, see
-        #   https://stackoverflow.com/questions/48753060/what-are-these-extra-symbols-in-a-comprehensions-symtable
-        # For related discussion, see
-        #   https://bugs.python.org/issue10544
-        gens = node.generators  # tuple of ast.comprehension
-        outermost = gens[0]
-        moregens = gens[1:] if len(gens) > 1 else []
-
-        outermost_iters = sanitize_exprs(outermost.iter)
-        outermost_targets = sanitize_exprs(outermost.target)
-        for expr in outermost_iters:
-            self.visit(expr)  # set self.last_value (to something and hope for the best)
-
-        with ExecuteInInnerScope(self, label):
-            for expr in outermost_targets:
-                self.visit(expr)  # use self.last_value
-            self.last_value = None
-            for expr in outermost.ifs:
-                self.visit(expr)
-
-            # TODO: there's also an is_async field we might want to use in a future version of Pyan.
-            for gen in moregens:
-                targets = sanitize_exprs(gen.target)
-                values = sanitize_exprs(gen.iter)
-                self.analyze_binding(targets, values)
-                for expr in gen.ifs:
+        
+        # since https://peps.python.org/pep-0709/ introduce in python 3.12
+        # we don't comprehension in scope, so we can ignore this logic
+        # locals of comprehension would be available on the parent scope
+        # and that should be sufficient of this code usage
+        # TODO Fix somewhen
+        if sys.version_info < (3, 12):
+            
+            # The outermost iterator is evaluated in the current scope;
+            # everything else in the new inner scope.
+            #
+            # See function symtable_handle_comprehension() in
+            #   https://github.com/python/cpython/blob/master/Python/symtable.c
+            # For how it works, see
+            #   https://stackoverflow.com/questions/48753060/what-are-these-extra-symbols-in-a-comprehensions-symtable
+            # For related discussion, see
+            #   https://bugs.python.org/issue10544
+            gens = node.generators  # tuple of ast.comprehension
+            outermost = gens[0]
+            moregens = gens[1:] if len(gens) > 1 else []
+    
+            outermost_iters = sanitize_exprs(outermost.iter)
+            outermost_targets = sanitize_exprs(outermost.target)
+            for expr in outermost_iters:
+                self.visit(expr)  # set self.last_value (to something and hope for the best)
+    
+            with ExecuteInInnerScope(self, label):
+                for expr in outermost_targets:
+                    self.visit(expr)  # use self.last_value
+                self.last_value = None
+                for expr in outermost.ifs:
                     self.visit(expr)
-
-            self.visit(getattr(node, field1))  # e.g. node.elt
-            if field2:
-                self.visit(getattr(node, field2))
+    
+                # TODO: there's also an is_async field we might want to use in a future version of Pyan.
+                for gen in moregens:
+                    targets = sanitize_exprs(gen.target)
+                    values = sanitize_exprs(gen.iter)
+                    self.analyze_binding(targets, values)
+                    for expr in gen.ifs:
+                        self.visit(expr)
+    
+                self.visit(getattr(node, field1))  # e.g. node.elt
+                if field2:
+                    self.visit(getattr(node, field2))
 
     def visit_Call(self, node):
         self.logger.debug("Call %s, %s:%s" % (get_ast_node_name(node.func), self.filename, node.lineno))

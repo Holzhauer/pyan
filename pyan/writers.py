@@ -128,7 +128,7 @@ class DotWriter(Writer):
 
         # translucent gray (no hue to avoid visual confusion with any
         # group of colored nodes)
-        self.write('graph [style="filled,rounded", fillcolor="#80808018", label="%s"];' % graph.label)
+        self.write('graph [style="filled,rounded", fillcolor="#80808018", fontname="Arial", label="%s"];' % graph.label)
 
     def finish_subgraph(self, graph):
         self.log("Finish subgraph %s" % graph.label)
@@ -140,7 +140,7 @@ class DotWriter(Writer):
         self.log("Write node %s" % node.label)
         self.write(
             '%s [label="%s", style="filled", fillcolor="%s",'
-            ' fontcolor="%s", group="%s"];' % (node.id, node.label, node.fill_color, node.text_color, node.group)
+            ' fontcolor="%s", fontname="Arial", group="%s"];' % (node.id, node.label, node.fill_color, node.text_color, node.group)
         )
 
     def write_edge(self, edge):
